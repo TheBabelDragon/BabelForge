@@ -35,9 +35,11 @@ pub enum IdempotencyLookup {
 }
 
 impl StateStore {
-    pub fn open(path: impl AsRef<Path>, expected_node_id: Option<Uuid>) -> Result<Self, ForgeError> {
-        let conn =
-            Connection::open(path).map_err(|e| ForgeError::new("db_open", e.to_string()))?;
+    pub fn open(
+        path: impl AsRef<Path>,
+        expected_node_id: Option<Uuid>,
+    ) -> Result<Self, ForgeError> {
+        let conn = Connection::open(path).map_err(|e| ForgeError::new("db_open", e.to_string()))?;
         Self::from_conn(conn, expected_node_id)
     }
 
@@ -237,8 +239,13 @@ impl StateStore {
         let mut rows = stmt
             .query(params![key])
             .map_err(|e| ForgeError::new("db", e.to_string()))?;
-        if let Some(row) = rows.next().map_err(|e| ForgeError::new("db", e.to_string()))? {
-            let s: String = row.get(0).map_err(|e| ForgeError::new("db", e.to_string()))?;
+        if let Some(row) = rows
+            .next()
+            .map_err(|e| ForgeError::new("db", e.to_string()))?
+        {
+            let s: String = row
+                .get(0)
+                .map_err(|e| ForgeError::new("db", e.to_string()))?;
             let v: Value =
                 serde_json::from_str(&s).map_err(|e| ForgeError::new("db_json", e.to_string()))?;
             Ok(Some(v))
@@ -511,7 +518,8 @@ impl StateStore {
         request_id: Uuid,
         result: &Value,
     ) -> Result<(), ForgeError> {
-        let s = serde_json::to_string(result).map_err(|e| ForgeError::new("json", e.to_string()))?;
+        let s =
+            serde_json::to_string(result).map_err(|e| ForgeError::new("json", e.to_string()))?;
         self.conn
             .execute(
                 "INSERT OR REPLACE INTO idempotency (key, request_fingerprint, request_id, result_json) VALUES (?1, ?2, ?3, ?4)",
