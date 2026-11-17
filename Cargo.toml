@@ -24,26 +24,26 @@ license = "MIT"
 authors = ["TheBabelDragon"]
 repository = "https://github.com/TheBabelDragon/BabelForge"
 description = "BabelForge — Universal Execution Runtime for the TheBabelDragon ecosystem"
+rust-version = "1.75"
 
 [workspace.dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-thiserror = "1.0"
-anyhow = "1.0"
-uuid = { version = "1.8", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
-rusqlite = { version = "0.31", features = ["bundled"] }
-ed25519-dalek = { version = "2.1", features = ["rand_core"] }
-rand = "0.8"
-sha2 = "0.10"
-hex = "0.4"
+serde = { version = "1.0.203", features = ["derive"] }
+serde_json = "1.0.117"
+thiserror = "1.0.61"
+anyhow = "1.0.86"
+uuid = { version = "1.8.0", features = ["v4", "serde"] }
+chrono = { version = "0.4.38", features = ["serde"] }
+rusqlite = { version = "0.31.0", features = ["bundled"] }
+ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
+rand = "0.8.5"
+sha2 = "0.10.8"
+hex = "0.4.3"
 clap = { version = "=4.4.18", features = ["derive"] }
-tracing = "0.1"
-tracing-subscriber = "0.3"
-tempfile = "3.10"
-once_cell = "1.19"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+tempfile = "3.10.1"
+once_cell = "1.19.0"
 
-# Internal crates
 forge-core = { path = "crates/forge-core" }
 forge-contracts = { path = "crates/forge-contracts" }
 forge-registry = { path = "crates/forge-registry" }
