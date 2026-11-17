@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+  test:
+    name: fmt + clippy + test + experiment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 1.89.0
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.89.0"
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Remove incomplete Cargo.lock if present
+        run: |
+          if [ -f Cargo.lock ]; then
+            # Drop incomplete / placeholder locks so cargo can resolve cleanly
+            if ! grep -q 'name = "forge-cli"' Cargo.lock 2>/dev/null; then
+              rm -f Cargo.lock
+              echo "Removed incomplete Cargo.lock"
+            fi
+          fi
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: cargo test
+        run: cargo test --workspace --all-features
+
+      - name: cargo build --release
+        run: cargo build --release -p forge-cli
+
+      - name: Run Phase 7 experiment
+        run: cargo run -p forge-cli --release -- experiment
+
+      - name: Upload Cargo.lock
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cargo.lock
+          path: Cargo.lock
+
+  wasm:
+    name: wasm32 check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 1.89.0
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.89.0"
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Remove incomplete Cargo.lock if present
+        run: |
+          if [ -f Cargo.lock ] && ! grep -q 'name = "forge-cli"' Cargo.lock 2>/dev/null; then
+            rm -f Cargo.lock
+          fi
+
+      - name: Check forge-contracts + forge-wasm for wasm32
+        run: |
+          cargo check -p forge-contracts --target wasm32-unknown-unknown
+          cargo check -p forge-wasm --target wasm32-unknown-unknown

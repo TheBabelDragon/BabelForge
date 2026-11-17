@@ -1,0 +1,10 @@
+[package]
+name = "forge-replay"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+forge-contracts = { workspace = true }
+forge-state = { workspace = true }
+serde_json = { workspace = true }

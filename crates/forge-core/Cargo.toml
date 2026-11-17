@@ -1,0 +1,18 @@
+[package]
+name = "forge-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Runtime lifecycle and execution model"
+
+[dependencies]
+forge-contracts = { workspace = true }
+forge-crypto = { workspace = true }
+forge-state = { workspace = true }
+forge-policy = { workspace = true }
+forge-executor = { workspace = true }
+forge-registry = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
