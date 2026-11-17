@@ -11,7 +11,11 @@ use std::path::PathBuf;
 use uuid::Uuid;
 
 #[derive(Parser)]
-#[command(name = "forge", version, about = "BabelForge — Universal Execution Runtime")]
+#[command(
+    name = "forge",
+    version,
+    about = "BabelForge — Universal Execution Runtime"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -57,8 +61,7 @@ fn run_experiment(data_dir: Option<PathBuf>) -> anyhow::Result<()> {
     let counter_db = base.join("counter.db");
     let sensor_db = base.join("sensor.db");
 
-    let (mut node_a, mut node_b) =
-        build_experiment_nodes(Some(&counter_db), Some(&sensor_db))?;
+    let (mut node_a, mut node_b) = build_experiment_nodes(Some(&counter_db), Some(&sensor_db))?;
 
     println!("1. Nodes registered:");
     println!("   A: {} ({})", node_a.id.name, node_a.id.id);
@@ -104,7 +107,10 @@ fn run_experiment(data_dir: Option<PathBuf>) -> anyhow::Result<()> {
     );
     req_budget.budget = Some(0);
     let res_limit = node_a.submit(req_budget);
-    println!("\n6. Resource limit (budget 0): {:?}", res_limit.map(|r| r.status));
+    println!(
+        "\n6. Resource limit (budget 0): {:?}",
+        res_limit.map(|r| r.status)
+    );
 
     let events = node_a.events(Some(100))?;
     println!("\n7. Events recorded on A: {}", events.len());
@@ -117,7 +123,10 @@ fn run_experiment(data_dir: Option<PathBuf>) -> anyhow::Result<()> {
     node_a2.grant(node_a2.id.id, "counter.v1");
 
     println!("\n8. After restart:");
-    println!("   identity preserved: {} (was {})", node_a2.id.id, id_before);
+    println!(
+        "   identity preserved: {} (was {})",
+        node_a2.id.id, id_before
+    );
     assert_eq!(node_a2.id.id, id_before, "node UUID must survive reopen");
     let val = node_a2
         .store
@@ -155,7 +164,10 @@ fn run_experiment(data_dir: Option<PathBuf>) -> anyhow::Result<()> {
     let r2 = node_a2.submit(req2)?;
     println!("\n11. Idempotency:");
     println!("    first:  {:?}", r1.status);
-    println!("    second: {:?} (from_replay={})", r2.status, r2.from_replay);
+    println!(
+        "    second: {:?} (from_replay={})",
+        r2.status, r2.from_replay
+    );
     assert_eq!(r2.status, OperationStatus::IdempotentReplay);
 
     // Conflict: same key, different input
@@ -167,8 +179,14 @@ fn run_experiment(data_dir: Option<PathBuf>) -> anyhow::Result<()> {
     );
     req3.idempotency_key = Some("exp-idem-1".into());
     let conflict = node_a2.submit(req3);
-    println!("    conflict (different input, same key): {:?}", conflict.as_ref().err().map(|e| e.code.as_str()));
-    assert!(conflict.is_err(), "different request must conflict on same idempotency key");
+    println!(
+        "    conflict (different input, same key): {:?}",
+        conflict.as_ref().err().map(|e| e.code.as_str())
+    );
+    assert!(
+        conflict.is_err(),
+        "different request must conflict on same idempotency key"
+    );
 
     let req_s = OperationRequest::new(
         node_b.id.id,
