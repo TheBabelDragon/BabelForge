@@ -31,8 +31,8 @@ serde = { version = "1.0.203", features = ["derive"] }
 serde_json = "1.0.117"
 thiserror = "1.0.61"
 anyhow = "1.0.86"
-uuid = { version = "1.8.0", features = ["v4", "serde"] }
-chrono = { version = "0.4.38", features = ["serde"] }
+uuid = { version = "=1.11.0", features = ["v4", "serde"] }
+chrono = { version = "0.4.38", default-features = false, features = ["serde", "clock", "std"] }
 rusqlite = { version = "0.31.0", features = ["bundled"] }
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
 rand = "0.8.5"
