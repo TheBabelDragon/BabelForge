@@ -3,14 +3,13 @@
 //! Lifecycle: DISCOVER → INSPECT → AUTHORIZE → EXECUTE → VERIFY → RECORD
 
 use forge_contracts::{
-    AuthorizationDecision, CapabilityDescriptor, EventKind, ForgeError, OperationRequest,
-    OperationResult, OperationStatus,
+    CapabilityDescriptor, EventKind, ForgeError, OperationRequest, OperationResult,
+    OperationStatus,
 };
 use forge_policy::PolicyEngine;
-use forge_state::StateStore;
+use forge_state::{IdempotencyLookup, StateStore};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use uuid::Uuid;
 
 pub type Handler =
     Box<dyn Fn(&Value, &mut StateStore) -> Result<Value, ForgeError> + Send + Sync>;
@@ -28,11 +27,7 @@ impl Executor {
         }
     }
 
-    pub fn register(
-        &mut self,
-        desc: CapabilityDescriptor,
-        handler: Handler,
-    ) {
+    pub fn register(&mut self, desc: CapabilityDescriptor, handler: Handler) {
         self.handlers.insert(desc.id.clone(), handler);
         self.capabilities.insert(desc.id.clone(), desc);
     }
@@ -45,27 +40,42 @@ impl Executor {
         self.capabilities.get(id)
     }
 
-    /// Full execution path for a request.
     pub fn execute(
         &self,
         req: OperationRequest,
         policy: &PolicyEngine,
         store: &mut StateStore,
     ) -> Result<OperationResult, ForgeError> {
-        // Idempotency
         let idem_key = req
             .idempotency_key
             .clone()
             .unwrap_or_else(|| req.request_id.to_string());
-        if let Some(prev) = store.check_idempotency(&idem_key)? {
-            let mut result: OperationResult = serde_json::from_value(prev)
-                .map_err(|e| ForgeError::new("json", e.to_string()))?;
-            result.from_replay = true;
-            result.status = OperationStatus::IdempotentReplay;
-            return Ok(result);
+
+        let fingerprint = StateStore::request_fingerprint(
+            req.caller_id,
+            req.target_node_id,
+            &req.capability_id,
+            &req.input,
+            req.budget,
+            req.timeout_ms,
+        )?;
+
+        match store.check_idempotency(&idem_key, &fingerprint)? {
+            IdempotencyLookup::Hit(prev) => {
+                let mut result: OperationResult = serde_json::from_value(prev)
+                    .map_err(|e| ForgeError::new("json", e.to_string()))?;
+                result.from_replay = true;
+                result.status = OperationStatus::IdempotentReplay;
+                return Ok(result);
+            }
+            IdempotencyLookup::Conflict => {
+                return Err(ForgeError::conflict(
+                    "idempotency key already used with a different request fingerprint",
+                ));
+            }
+            IdempotencyLookup::Miss => {}
         }
 
-        // Authorize
         let decision = policy.authorize(&req);
         store.append_event(
             EventKind::AuthorizationDecided,
@@ -91,17 +101,15 @@ impl Executor {
                 None,
             )?;
             let v = serde_json::to_value(&result).unwrap();
-            store.store_idempotency(&idem_key, req.request_id, &v)?;
+            store.store_idempotency(&idem_key, &fingerprint, req.request_id, &v)?;
             return Ok(result);
         }
 
-        // Limits
         let cap = self
             .get_capability(&req.capability_id)
             .ok_or_else(|| ForgeError::not_found(format!("capability {}", req.capability_id)))?;
         policy.check_limits(&req, cap.cost)?;
 
-        // Execute
         let handler = self
             .handlers
             .get(&req.capability_id)
@@ -144,7 +152,7 @@ impl Executor {
         )?;
 
         let v = serde_json::to_value(&result).unwrap();
-        store.store_idempotency(&idem_key, req.request_id, &v)?;
+        store.store_idempotency(&idem_key, &fingerprint, req.request_id, &v)?;
         Ok(result)
     }
 }
@@ -155,7 +163,6 @@ impl Default for Executor {
     }
 }
 
-/// Built-in counter capability (Node A).
 pub fn counter_capability() -> CapabilityDescriptor {
     CapabilityDescriptor::new(
         "counter.v1",
@@ -170,10 +177,7 @@ pub fn register_counter(executor: &mut Executor) {
     executor.register(
         desc,
         Box::new(|input, store| {
-            let op = input
-                .get("op")
-                .and_then(|v| v.as_str())
-                .unwrap_or("read");
+            let op = input.get("op").and_then(|v| v.as_str()).unwrap_or("read");
             let mut value = store
                 .get_state("counter.v1")?
                 .and_then(|v| v.as_i64())
@@ -182,10 +186,7 @@ pub fn register_counter(executor: &mut Executor) {
             match op {
                 "read" => Ok(json!({ "value": value })),
                 "increment" => {
-                    let delta = input
-                        .get("delta")
-                        .and_then(|v| v.as_i64())
-                        .unwrap_or(1);
+                    let delta = input.get("delta").and_then(|v| v.as_i64()).unwrap_or(1);
                     if delta < 0 || delta > 10 {
                         return Err(ForgeError::invalid_input(
                             "delta must be between 0 and 10 inclusive",
@@ -204,7 +205,6 @@ pub fn register_counter(executor: &mut Executor) {
     );
 }
 
-/// Built-in sensor capability (Node B).
 pub fn sensor_capability() -> CapabilityDescriptor {
     let mut d = CapabilityDescriptor::new(
         "sensor.threshold.v1",
@@ -221,10 +221,7 @@ pub fn register_sensor(executor: &mut Executor) {
     executor.register(
         desc,
         Box::new(|input, store| {
-            let op = input
-                .get("op")
-                .and_then(|v| v.as_str())
-                .unwrap_or("read");
+            let op = input.get("op").and_then(|v| v.as_str()).unwrap_or("read");
             let mut value = store
                 .get_state("sensor.threshold.v1")?
                 .and_then(|v| v.as_f64())
