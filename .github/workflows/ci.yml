@@ -27,6 +27,16 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: Remove incomplete Cargo.lock if present
+        run: |
+          if [ -f Cargo.lock ]; then
+            # Drop incomplete / placeholder locks so cargo can resolve cleanly
+            if ! grep -q 'name = "forge-cli"' Cargo.lock 2>/dev/null; then
+              rm -f Cargo.lock
+              echo "Removed incomplete Cargo.lock"
+            fi
+          fi
+
       - name: cargo fmt --check
         run: cargo fmt --all -- --check
 
@@ -63,6 +73,12 @@ jobs:
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+
+      - name: Remove incomplete Cargo.lock if present
+        run: |
+          if [ -f Cargo.lock ] && ! grep -q 'name = "forge-cli"' Cargo.lock 2>/dev/null; then
+            rm -f Cargo.lock
+          fi
 
       - name: Check forge-contracts + forge-wasm for wasm32
         run: |
