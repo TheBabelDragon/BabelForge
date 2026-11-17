@@ -8,7 +8,6 @@ use forge_crypto::NodeKeyPair;
 use forge_executor::{register_counter, register_sensor, Executor};
 use forge_policy::PolicyEngine;
 use forge_registry::Registry;
-use forge_replay;
 use forge_state::StateStore;
 use std::path::Path;
 use uuid::Uuid;
