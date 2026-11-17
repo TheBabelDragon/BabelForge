@@ -1,0 +1,58 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/forge-core",
+    "crates/forge-contracts",
+    "crates/forge-registry",
+    "crates/forge-state",
+    "crates/forge-policy",
+    "crates/forge-executor",
+    "crates/forge-events",
+    "crates/forge-replay",
+    "crates/forge-crypto",
+    "crates/forge-transport",
+    "crates/forge-node",
+    "crates/forge-wasm",
+    "crates/forge-cli",
+]
+default-members = ["crates/forge-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["TheBabelDragon"]
+repository = "https://github.com/TheBabelDragon/BabelForge"
+description = "BabelForge — Universal Execution Runtime for the TheBabelDragon ecosystem"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+anyhow = "1.0"
+uuid = { version = "1.8", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+rand = "0.8"
+sha2 = "0.10"
+hex = "0.4"
+clap = { version = "=4.4.18", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tempfile = "3.10"
+once_cell = "1.19"
+
+# Internal crates
+forge-core = { path = "crates/forge-core" }
+forge-contracts = { path = "crates/forge-contracts" }
+forge-registry = { path = "crates/forge-registry" }
+forge-state = { path = "crates/forge-state" }
+forge-policy = { path = "crates/forge-policy" }
+forge-executor = { path = "crates/forge-executor" }
+forge-events = { path = "crates/forge-events" }
+forge-replay = { path = "crates/forge-replay" }
+forge-crypto = { path = "crates/forge-crypto" }
+forge-transport = { path = "crates/forge-transport" }
+forge-node = { path = "crates/forge-node" }
+forge-wasm = { path = "crates/forge-wasm" }
