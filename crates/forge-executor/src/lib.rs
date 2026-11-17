@@ -3,16 +3,14 @@
 //! Lifecycle: DISCOVER → INSPECT → AUTHORIZE → EXECUTE → VERIFY → RECORD
 
 use forge_contracts::{
-    CapabilityDescriptor, EventKind, ForgeError, OperationRequest, OperationResult,
-    OperationStatus,
+    CapabilityDescriptor, EventKind, ForgeError, OperationRequest, OperationResult, OperationStatus,
 };
 use forge_policy::PolicyEngine;
 use forge_state::{IdempotencyLookup, StateStore};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
-pub type Handler =
-    Box<dyn Fn(&Value, &mut StateStore) -> Result<Value, ForgeError> + Send + Sync>;
+pub type Handler = Box<dyn Fn(&Value, &mut StateStore) -> Result<Value, ForgeError> + Send + Sync>;
 
 pub struct Executor {
     capabilities: HashMap<String, CapabilityDescriptor>,
