@@ -1,3 +1,8 @@
+#![allow(
+    clippy::type_complexity,
+    clippy::too_many_arguments,
+    clippy::explicit_counter_loop
+)]
 //! Persistent state and event journal (SQLite) — stabilized v0.1.
 //!
 //! Guarantees:
@@ -37,9 +42,9 @@ impl StateStore {
     }
 
     pub fn open_in_memory(node_id: Uuid) -> Result<Self, ForgeError> {
-        let conn = Connection::open_in_memory()
-            .map_err(|e| ForgeError::new("db_open", e.to_string()))?;
-        let mut store = Self {
+        let conn =
+            Connection::open_in_memory().map_err(|e| ForgeError::new("db_open", e.to_string()))?;
+        let store = Self {
             conn,
             node_id,
             next_sequence: 0,
@@ -422,9 +427,8 @@ impl StateStore {
     pub fn verify_event_chain(&self) -> Result<bool, ForgeError> {
         let events = self.list_events(None)?;
         let mut prev = "0".repeat(64);
-        let mut expected_seq = 0u64;
-        for e in &events {
-            if e.sequence != expected_seq {
+        for (expected_seq, e) in events.iter().enumerate() {
+            if e.sequence != expected_seq as u64 {
                 return Ok(false);
             }
             if e.prev_hash != prev {
@@ -449,7 +453,6 @@ impl StateStore {
                 return Ok(false);
             }
             prev = e.content_hash.clone();
-            expected_seq += 1;
         }
         Ok(true)
     }
