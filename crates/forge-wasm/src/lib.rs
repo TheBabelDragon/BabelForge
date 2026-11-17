@@ -5,8 +5,8 @@
 
 pub use forge_contracts::{
     canonical::{canonical_hash, canonical_json},
-    CapabilityDescriptor, CONTRACT_VERSION, ForgeError, NodeId, OperationRequest,
-    OperationResult, OperationStatus,
+    CapabilityDescriptor, ForgeError, NodeId, OperationRequest, OperationResult, OperationStatus,
+    CONTRACT_VERSION,
 };
 
 pub fn version() -> String {

@@ -4,8 +4,8 @@
 //! Instead we produce a deterministic key-sorted, whitespace-free
 //! representation suitable for content-addressing.
 
-use sha2::{Digest, Sha256};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 /// Produce a canonical JSON string (sorted keys, no whitespace).
 pub fn canonical_json(value: &Value) -> Result<String, String> {
@@ -52,9 +52,9 @@ pub fn canonical_json(value: &Value) -> Result<String, String> {
 
 /// SHA-256 hex digest of the canonical encoding.
 pub fn canonical_hash(value: &Value) -> Result<String, String> {
-    let canon = canonical_json(value)?;
+    let s = canonical_json(value)?;
     let mut hasher = Sha256::new();
-    hasher.update(canon.as_bytes());
+    hasher.update(s.as_bytes());
     Ok(hex::encode(hasher.finalize()))
 }
 
@@ -64,7 +64,7 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn object_keys_are_sorted() {
+    fn key_order_stable() {
         let a = json!({"b": 1, "a": 2});
         let b = json!({"a": 2, "b": 1});
         assert_eq!(canonical_json(&a).unwrap(), canonical_json(&b).unwrap());
@@ -72,9 +72,11 @@ mod tests {
     }
 
     #[test]
-    fn nested_stable() {
-        let v = json!({"z": {"y": [3, 1, 2], "x": true}, "a": null});
-        let h = canonical_hash(&v).unwrap();
-        assert_eq!(h.len(), 64);
+    fn nested_deterministic() {
+        let v = json!({"z": [3, 2, 1], "a": {"y": true, "x": null}});
+        let h1 = canonical_hash(&v).unwrap();
+        let h2 = canonical_hash(&v).unwrap();
+        assert_eq!(h1, h2);
+        assert_eq!(h1.len(), 64);
     }
 }
