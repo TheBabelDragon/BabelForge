@@ -187,7 +187,7 @@ pub fn register_counter(executor: &mut Executor) {
                 "read" => Ok(json!({ "value": value })),
                 "increment" => {
                     let delta = input.get("delta").and_then(|v| v.as_i64()).unwrap_or(1);
-                    if delta < 0 || delta > 10 {
+                    if !(0..=10).contains(&delta) {
                         return Err(ForgeError::invalid_input(
                             "delta must be between 0 and 10 inclusive",
                         ));
@@ -234,7 +234,7 @@ pub fn register_sensor(executor: &mut Executor) {
                         .get("value")
                         .and_then(|v| v.as_f64())
                         .ok_or_else(|| ForgeError::invalid_input("missing value"))?;
-                    if v < 0.0 || v > 100.0 {
+                    if !(0.0..=100.0).contains(&v) {
                         return Err(ForgeError::invalid_input("value must be 0..100"));
                     }
                     value = v;
