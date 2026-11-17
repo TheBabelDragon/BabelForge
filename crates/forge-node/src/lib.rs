@@ -23,13 +23,40 @@ pub struct Node {
 }
 
 impl Node {
+    /// Create a new node. If `db_path` exists and already has an identity, that identity is restored.
     pub fn create(name: &str, db_path: Option<&Path>) -> Result<Self, forge_contracts::ForgeError> {
         let keypair = NodeKeyPair::generate();
-        let id = NodeId::new(name).with_key(keypair.public_key_hex());
+        let provisional = NodeId::new(name).with_key(keypair.public_key_hex());
+
         let store = match db_path {
-            Some(p) => StateStore::open(p, id.id)?,
-            None => StateStore::open_in_memory(id.id)?,
+            Some(p) if p.exists() => {
+                // Reopen existing DB — identity must come from the store.
+                StateStore::open(p, None)?
+            }
+            Some(p) => {
+                // New DB path — seed with provisional identity.
+                let store = StateStore::open(p, Some(provisional.id))?;
+                store.persist_identity(
+                    provisional.id,
+                    Some((&keypair.public_key_hex(), "")), // private key not persisted as hex in v0.1 demo
+                )?;
+                store
+            }
+            None => StateStore::open_in_memory(provisional.id)?,
         };
+
+        let node_uuid = store.node_id();
+        let id = if node_uuid == provisional.id {
+            provisional
+        } else {
+            // Restored identity — keep stored UUID, attach current public key for this process.
+            NodeId {
+                id: node_uuid,
+                name: name.to_string(),
+                public_key_hex: Some(keypair.public_key_hex()),
+            }
+        };
+
         let policy = PolicyEngine::new(id.id, ExecutionLimits::default());
         let executor = Executor::new();
         let registry = Registry::new();
@@ -43,15 +70,19 @@ impl Node {
             registry,
         };
 
-        node.store.append_event(
-            EventKind::NodeRegistered,
-            serde_json::json!({
-                "node_id": id.id,
-                "name": id.name,
-                "public_key": node.keypair.public_key_hex(),
-            }),
-            None,
-        )?;
+        // Only emit NodeRegistered on first creation (sequence 0 after genesis would already exist).
+        let events = node.store.list_events(Some(1))?;
+        if events.is_empty() {
+            node.store.append_event(
+                EventKind::NodeRegistered,
+                serde_json::json!({
+                    "node_id": id.id,
+                    "name": id.name,
+                    "public_key": node.keypair.public_key_hex(),
+                }),
+                None,
+            )?;
+        }
 
         Ok(node)
     }
@@ -79,7 +110,10 @@ impl Node {
         });
     }
 
-    pub fn submit(&mut self, req: OperationRequest) -> Result<OperationResult, forge_contracts::ForgeError> {
+    pub fn submit(
+        &mut self,
+        req: OperationRequest,
+    ) -> Result<OperationResult, forge_contracts::ForgeError> {
         self.store.append_event(
             EventKind::OperationRequested,
             serde_json::to_value(&req).unwrap_or_default(),
@@ -88,11 +122,17 @@ impl Node {
         self.executor.execute(req, &self.policy, &mut self.store)
     }
 
-    pub fn inspect_state(&self, capability_id: Option<&str>) -> Result<forge_contracts::StateSnapshot, forge_contracts::ForgeError> {
+    pub fn inspect_state(
+        &self,
+        capability_id: Option<&str>,
+    ) -> Result<forge_contracts::StateSnapshot, forge_contracts::ForgeError> {
         self.store.snapshot(capability_id)
     }
 
-    pub fn events(&self, limit: usize) -> Result<Vec<forge_contracts::EventRecord>, forge_contracts::ForgeError> {
+    pub fn events(
+        &self,
+        limit: Option<usize>,
+    ) -> Result<Vec<forge_contracts::EventRecord>, forge_contracts::ForgeError> {
         self.store.list_events(limit)
     }
 
@@ -105,7 +145,6 @@ impl Node {
     }
 }
 
-/// Convenience: build the two simulated nodes for the Phase 7 experiment.
 pub fn build_experiment_nodes(
     counter_db: Option<&Path>,
     sensor_db: Option<&Path>,
