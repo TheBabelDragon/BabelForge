@@ -1,29 +1,34 @@
-//! Default-deny authorization and resource limits.
+//! Authorization policy — default-deny.
 
-use forge_contracts::{AuthorizationDecision, ExecutionLimits, ForgeError, OperationRequest, PermissionGrant};
+use forge_contracts::{
+    AuthorizationDecision, ExecutionLimits, ForgeError, OperationRequest, PermissionGrant,
+};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 pub struct PolicyEngine {
-    limits: ExecutionLimits,
-    grants: HashMap<(Uuid, String), bool>,
     owner_id: Uuid,
+    /// (principal, capability_id) -> allow
+    grants: HashMap<(Uuid, String), bool>,
+    limits: ExecutionLimits,
 }
 
 impl PolicyEngine {
     pub fn new(owner_id: Uuid, limits: ExecutionLimits) -> Self {
         Self {
-            limits,
-            grants: HashMap::new(),
             owner_id,
+            grants: HashMap::new(),
+            limits,
         }
     }
 
-    pub fn grant(&mut self, grant: PermissionGrant) {
-        self.grants.insert((grant.principal_id, grant.capability_id), grant.allow);
+    pub fn grant(&mut self, g: PermissionGrant) {
+        self.grants
+            .insert((g.principal_id, g.capability_id), g.allow);
     }
 
     pub fn authorize(&self, req: &OperationRequest) -> AuthorizationDecision {
+        // Owner may always operate on own node.
         if req.caller_id == self.owner_id && req.target_node_id == self.owner_id {
             return AuthorizationDecision {
                 schema_version: forge_contracts::CONTRACT_VERSION.to_string(),
@@ -64,7 +69,11 @@ impl PolicyEngine {
         }
     }
 
-    pub fn check_limits(&self, req: &OperationRequest, capability_cost: u64) -> Result<(), ForgeError> {
+    pub fn check_limits(
+        &self,
+        req: &OperationRequest,
+        capability_cost: u64,
+    ) -> Result<(), ForgeError> {
         if capability_cost > self.limits.max_cost_per_request {
             return Err(ForgeError::limit_exceeded(format!(
                 "cost {} exceeds max {}",

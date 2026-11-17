@@ -30,7 +30,11 @@ impl NodeKeyPair {
         hex::encode(sig.to_bytes())
     }
 
-    pub fn verify(public_key_hex: &str, message: &[u8], signature_hex: &str) -> Result<(), ForgeError> {
+    pub fn verify(
+        public_key_hex: &str,
+        message: &[u8],
+        signature_hex: &str,
+    ) -> Result<(), ForgeError> {
         let pk_bytes = hex::decode(public_key_hex)
             .map_err(|e| ForgeError::new("invalid_key", e.to_string()))?;
         let pk_array: [u8; 32] = pk_bytes
