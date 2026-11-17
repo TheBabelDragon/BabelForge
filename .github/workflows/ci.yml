@@ -31,16 +31,23 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: cargo clippy
-        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
       - name: cargo test
-        run: cargo test --workspace --all-features --locked
+        run: cargo test --workspace --all-features
 
       - name: cargo build --release
-        run: cargo build --release -p forge-cli --locked
+        run: cargo build --release -p forge-cli
 
       - name: Run Phase 7 experiment
-        run: cargo run -p forge-cli --release --locked -- experiment
+        run: cargo run -p forge-cli --release -- experiment
+
+      - name: Upload Cargo.lock
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cargo.lock
+          path: Cargo.lock
 
   wasm:
     name: wasm32 check
@@ -59,5 +66,5 @@ jobs:
 
       - name: Check forge-contracts + forge-wasm for wasm32
         run: |
-          cargo check -p forge-contracts --target wasm32-unknown-unknown --locked
-          cargo check -p forge-wasm --target wasm32-unknown-unknown --locked
+          cargo check -p forge-contracts --target wasm32-unknown-unknown
+          cargo check -p forge-wasm --target wasm32-unknown-unknown
