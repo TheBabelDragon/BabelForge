@@ -1,0 +1,21 @@
+[package]
+name = "forge-node"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Executable runtime node"
+
+[dependencies]
+forge-core = { workspace = true }
+forge-contracts = { workspace = true }
+forge-crypto = { workspace = true }
+forge-state = { workspace = true }
+forge-policy = { workspace = true }
+forge-executor = { workspace = true }
+forge-registry = { workspace = true }
+forge-replay = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
